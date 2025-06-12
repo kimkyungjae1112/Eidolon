@@ -1,0 +1,116 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Character.h"
+#include "EICharacter.generated.h"
+
+struct FInputActionValue;
+class USpringArmComponent;
+class UCameraComponent;
+class UInputMappingContext;
+class UInputAction;
+class UEIAttributeComponent;
+class UEIPlayerHUDWidget;
+class UEIStateComponent;
+class UEICombatComponent;
+class UAnimMontage;
+
+UCLASS()
+class EIDOLON_API AEICharacter : public ACharacter
+{
+	GENERATED_BODY()
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USpringArmComponent> SpringArmComp;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> CameraComp;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputMappingContext> DefaultMappingContext;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> LookAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> SprintRollingAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> InteractAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> ToggleCombatAction;
+
+private:
+	/* 캐릭터의 각종 스텟 관리 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UEIAttributeComponent> AttributeComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UEIStateComponent> StateComp;
+
+	/* 무기, 전투 관련 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UEICombatComponent> CombatComp;
+
+private:
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UEIPlayerHUDWidget> PlayerHUDWidgetClass;
+
+	UPROPERTY(VisibleAnywhere, Category = "UI")
+	TObjectPtr<UEIPlayerHUDWidget> PlayerHUDWidget;
+
+
+protected:
+	/* 질주 속도 */
+	UPROPERTY(EditAnywhere, Category = "Sprinting")
+	float SprintingSpeed = 750.f;
+
+	/* 일반 속도 */
+	UPROPERTY(EditAnywhere, Category = "Sprinting")
+	float NormalSpeed = 500.f;
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Montage")
+	TObjectPtr<UAnimMontage> RollingMontage;
+
+public:
+	AEICharacter();
+
+protected:
+	virtual void BeginPlay() override;
+
+public:	
+	virtual void Tick(float DeltaTime) override;
+	virtual void NotifyControllerChanged() override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+public:
+	FORCEINLINE UEIStateComponent* GetStateComponent() const { return StateComp; }
+
+protected:
+	/* 캐릭터가 이동중인지 검사 */
+	bool IsMoving() const;
+	bool CanToggleCombat() const;
+
+	/* 이동 */
+	void Move(const FInputActionValue& Value);
+	/* 카메라 방향 */
+	void Look(const FInputActionValue& Value);
+	/* 질주 */
+	void Sprinting();
+	/* 질주 중지 */
+	void StopSprint();
+	/* 구르기 */
+	void Rolling();
+	/* 상호작용 */
+	void Interaction();
+	/* 전투상태 전환 */
+	void ToggleCombat();
+};
