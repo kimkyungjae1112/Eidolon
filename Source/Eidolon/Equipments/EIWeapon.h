@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Equipments/EIEquipment.h"
+#include "GameplayTagContainer.h"
 #include "EIWeapon.generated.h"
 
 struct FGameplayTag;
@@ -29,6 +30,11 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UEICombatComponent> CombatComp;
 
+// Data Section
+protected:
+	UPROPERTY(EditAnywhere)
+	TMap<FGameplayTag, float> StaminaCostMap;
+
 public:
 	AEIWeapon();
 
@@ -36,6 +42,8 @@ public:
 	virtual void EquipItem() override;
 
 	UAnimMontage* GetMontageForTag(const FGameplayTag& Tag, const int32 Index = 0) const;
+
+	float GetStaminaCost(const FGameplayTag& InTag) const;
 
 	FORCEINLINE FName GetEquipSocketName() const { return EquipSocketName; }
 	FORCEINLINE FName GetUnequipSocketName() const { return UnequipSocketName; }

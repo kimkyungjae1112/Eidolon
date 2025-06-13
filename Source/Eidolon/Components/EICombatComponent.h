@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayTagContainer.h"
 #include "EICombatComponent.generated.h"
 
 class AEIWeapon;
@@ -20,6 +21,10 @@ protected:
 	/* 전투 활성화 상태인지? */
 	UPROPERTY(EditAnywhere)
 	bool bCombatEnabled = false;
+
+	/* 마지막 Attack Type */
+	UPROPERTY(VisibleAnywhere)
+	FGameplayTag LastAttackType;
 
 public:	
 	UEICombatComponent();
@@ -38,4 +43,7 @@ public:
 	FORCEINLINE void SetCombatEnabled(const bool bEnabled) { bCombatEnabled = bEnabled; }
 
 	FORCEINLINE AEIWeapon* GetMainWeapon() const { return MainWeapon; }
+
+	FORCEINLINE FGameplayTag GetLastAttackType() const { return LastAttackType; }
+	FORCEINLINE void SetLastAttackType(const FGameplayTag& NewAttackType) { LastAttackType = NewAttackType; }
 };

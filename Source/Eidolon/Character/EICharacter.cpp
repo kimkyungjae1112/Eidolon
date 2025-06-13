@@ -18,6 +18,7 @@
 #include "Equipments/EIWeapon.h"
 #include "EIGameplayTags.h"
 #include "EIDefine.h"
+#include "Eidolon.h"
 
 
 AEICharacter::AEICharacter()
@@ -100,6 +101,15 @@ void AEICharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(SprintRollingAction, ETriggerEvent::Canceled, this, &ThisClass::Rolling);
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ThisClass::Interaction);
 		EnhancedInputComponent->BindAction(ToggleCombatAction, ETriggerEvent::Started, this, &ThisClass::ToggleCombat);
+
+		// Combat 상태로 자동 전환
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ThisClass::AutoToggleCombat);
+		// 일반 공격
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Canceled, this, &ThisClass::Attack);
+		// 특수 공격
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ThisClass::SpecialAttack);
+		// 강 공격
+		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this, &ThisClass::HeavyAttack);
 	}
 }
 
@@ -262,5 +272,182 @@ void AEICharacter::ToggleCombat()
 			}
 		}
 	}
+}
+
+void AEICharacter::AutoToggleCombat()
+{
+	if (CombatComp)
+	{
+		if (!CombatComp->IsCombatEnabled())
+		{
+			ToggleCombat();
+		}
+	}
+}
+
+void AEICharacter::Attack()
+{
+	const FGameplayTag AttackTypeTag = GetAttackPerform();
+
+	if (CanPerformAttack(AttackTypeTag))
+	{
+		ExecuteComboAttack(AttackTypeTag);
+	}
+}
+
+
+void AEICharacter::SpecialAttack()
+{
+	const FGameplayTag AttackTypeTag = EIGameplayTags::Character_Attack_Special;
+
+	if (CanPerformAttack(AttackTypeTag))
+	{
+		ExecuteComboAttack(AttackTypeTag);
+	}
+}
+
+void AEICharacter::HeavyAttack()
+{
+	const FGameplayTag AttackTypeTag = EIGameplayTags::Character_Attack_Heavy;
+
+	if(CanPerformAttack(AttackTypeTag))
+	{
+		ExecuteComboAttack(AttackTypeTag);
+	}
+}
+
+FGameplayTag AEICharacter::GetAttackPerform() const
+{
+	if (IsSprinting())
+	{
+		return EIGameplayTags::Character_Attack_Running;
+	}
+	return EIGameplayTags::Character_Attack_Light;
+}
+
+bool AEICharacter::CanPerformAttack(const FGameplayTag& AttackTypeTag) const
+{
+	check(StateComp);
+	check(CombatComp);
+	check(AttributeComp);
+
+	if (IsValid(CombatComp->GetMainWeapon()) == false)
+	{
+		return false;
+	}
+
+	FGameplayTagContainer CheckTags;
+	CheckTags.AddTag(EIGameplayTags::Character_State_Rolling);
+	CheckTags.AddTag(EIGameplayTags::Character_State_GeneralAction);
+
+	const float StaminaCost = CombatComp->GetMainWeapon()->GetStaminaCost(AttackTypeTag);
+
+	return StateComp->IsCurrentStateEqualToAny(CheckTags) == false
+		&& CombatComp->IsCombatEnabled()
+		&& AttributeComp->CheckHasEnoughStamina(StaminaCost);
+}
+
+void AEICharacter::DoAttack(const FGameplayTag& AttackTypeTag)
+{
+	check(StateComp);
+	check(AttributeComp);
+	check(CombatComp);
+
+	if (const AEIWeapon* Weapon = CombatComp->GetMainWeapon())
+	{
+		StateComp->SetState(EIGameplayTags::Character_State_Attacking);
+		StateComp->ToggleMovementInput(false);
+		CombatComp->SetLastAttackType(AttackTypeTag);
+
+		AttributeComp->ToggleStaminaRegeneration(false);
+
+		UAnimMontage* Montage = Weapon->GetMontageForTag(AttackTypeTag, ComboCounter);
+		if (!Montage)
+		{
+			// 콤보 한계 도달
+			ComboCounter = 0;
+			Montage = Weapon->GetMontageForTag(AttackTypeTag, ComboCounter);
+		}
+
+		PlayAnimMontage(Montage);
+
+		const float StaminaCost = Weapon->GetStaminaCost(AttackTypeTag);
+		AttributeComp->DecreaseStamina(StaminaCost);
+		AttributeComp->ToggleStaminaRegeneration(true, 1.5f);
+	}
+}
+
+void AEICharacter::ExecuteComboAttack(const FGameplayTag& AttackTypeTag)
+{
+	if(StateComp->GetCurrentState() != EIGameplayTags::Character_State_Attacking)
+	{
+		if (bComboSequenceRunning && bCanComboInput == false)
+		{
+			// 애니메이션은 끝났지만 아직 콤보 시퀀스가 유효할 때 - 추가 입력 기회
+			ComboCounter++;
+			EI_LOG(LogEI, Display, TEXT("Additional Input : Combo Counter = %d"), ComboCounter);
+		}
+		else
+		{
+			EI_LOG(LogEI, Display, TEXT(">>> ComboSequence Started <<<"));
+			ResetCombo();
+			bComboSequenceRunning = true;
+		}
+
+		DoAttack(AttackTypeTag);
+		GetWorld()->GetTimerManager().ClearTimer(ComboResetTimerHandle);
+	}
+	else if (bCanComboInput)
+	{
+		bSavedComboInput = true;
+	}
+}
+
+void AEICharacter::ResetCombo()
+{
+	EI_LOG(LogEI, Display, TEXT("Reset Combo"));
+
+	bComboSequenceRunning = false;
+	bCanComboInput = false;
+	bSavedComboInput = false;
+	ComboCounter = 0;
+}
+
+void AEICharacter::EnableComboWindow()
+{
+	bCanComboInput = true;
+	EI_LOG(LogEI, Display, TEXT("Combo Window Opened: Combo Counter = %d"), ComboCounter);
+}
+
+void AEICharacter::DisableComboWindow()
+{
+	check(CombatComp);
+
+	bCanComboInput = false;
+
+	if (bSavedComboInput)
+	{
+		bSavedComboInput = false;
+		ComboCounter++;
+		EI_LOG(LogEI, Display, TEXT("Combo Window Closed: Advancing to next combo = %d"), ComboCounter);
+		DoAttack(CombatComp->GetLastAttackType());
+	}
+	else
+	{
+		EI_LOG(LogEI, Display, TEXT("Combo Window Closed: No input received"));
+	}
+}
+
+void AEICharacter::AttackFinished(const float ComboResetDelay)
+{
+	EI_LOG(LogEI, Display, TEXT("Attack Finished"));
+
+	if (StateComp)
+	{
+		StateComp->ToggleMovementInput(true);
+	}
+
+	// ComboResetDelay 후에 콤보 시퀀스 종료
+	GetWorld()->GetTimerManager().SetTimer(ComboResetTimerHandle, this, &ThisClass::ResetCombo, ComboResetDelay, false);
 }
 
