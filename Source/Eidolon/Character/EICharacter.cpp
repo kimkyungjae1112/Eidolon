@@ -174,6 +174,8 @@ void AEICharacter::Sprinting()
 		GetCharacterMovement()->MaxWalkSpeed = SprintingSpeed;
 
 		AttributeComp->DecreaseStamina(0.1f);
+
+		bSprinting = true;
 	}
 	else
 	{
@@ -185,6 +187,7 @@ void AEICharacter::StopSprint()
 {
 	GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
 	AttributeComp->ToggleStaminaRegeneration(true);
+	bSprinting = false;
 }
 
 void AEICharacter::Rolling()

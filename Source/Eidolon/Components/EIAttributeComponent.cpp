@@ -2,6 +2,8 @@
 
 
 #include "Components/EIAttributeComponent.h"
+#include "EIStateComponent.h"
+#include "EIGameplayTags.h"
 
 UEIAttributeComponent::UEIAttributeComponent()
 {
@@ -66,6 +68,29 @@ void UEIAttributeComponent::BroadcastAttributeChanged(const EIAttributeType& InA
 		}
 
 		OnAttributeChanged.Broadcast(InAttributeType, Ratio);
+	}
+}
+
+void UEIAttributeComponent::TakeDamageAmount(float DamageAmount)
+{
+	// 체력 차감
+	BaseHealth = FMath::Clamp(BaseHealth - DamageAmount, 0.f, MaxHealth);
+
+	BroadcastAttributeChanged(EIAttributeType::Health);
+
+	if (BaseHealth <= 0.f)
+	{
+		// Call Death Delegate
+		if (OnDeath.IsBound())
+		{
+			OnDeath.Broadcast();
+		}
+
+		// Set Death State
+		if (UEIStateComponent* StateComp = GetOwner()->GetComponentByClass<UEIStateComponent>())
+		{
+			StateComp->SetState(EIGameplayTags::Character_State_Death);
+		}
 	}
 }
 

@@ -8,6 +8,7 @@
 #include "EIAttributeComponent.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FDelegateOnAttributeChanged, EIAttributeType, float)
+DECLARE_MULTICAST_DELEGATE(FOnDeath)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class EIDOLON_API UEIAttributeComponent : public UActorComponent
@@ -18,6 +19,9 @@ public:
 	/* 스텟 변경 Delegate */
 	FDelegateOnAttributeChanged OnAttributeChanged;
 
+	/* 죽음을 알리는 Delegate */
+	FOnDeath OnDeath;
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Stamina")
 	float BaseStamina = 100.0f;
@@ -27,6 +31,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Stamina")
 	float StaminaRegenRate = 0.2f; 
+
+	UPROPERTY(EditAnywhere, Category = "Health")
+	float BaseHealth = 100.f;
+
+	UPROPERTY(EditAnywhere, Category = "Health")
+	float MaxHealth = 100.f;
 
 	/** 스테미나 재생 타이머 */
 	FTimerHandle StaminaRegenTimerHandle;
@@ -43,6 +53,8 @@ public:
 public:
 	FORCEINLINE float GetBaseStamina() const { return BaseStamina; }	
 	FORCEINLINE float GetMaxStamina() const { return MaxStamina; }
+	FORCEINLINE float GetBaseHealth() const { return BaseHealth; }
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 
 	FORCEINLINE float GetStaminaRatio() const { return BaseStamina / MaxStamina; }
 
@@ -57,6 +69,8 @@ public:
 
 	/* 스텟 변경시 브로드캐스트 Wrapper 함수 */
 	void BroadcastAttributeChanged(const EIAttributeType& InAttributeType) const;
+
+	void TakeDamageAmount(float DamageAmount);
 
 private:
 	void RegenerateStaminaHandler();
