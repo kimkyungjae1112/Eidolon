@@ -11,6 +11,7 @@
 #include "Components/EIAttributeComponent.h"
 #include "Components/EIStateComponent.h"
 #include "Components/EICombatComponent.h"
+#include "Components/EITargetingComponent.h"
 #include "UI/EIPlayerHUDWidget.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Interface/EIInteractInterface.h"
@@ -49,6 +50,7 @@ AEICharacter::AEICharacter()
 	AttributeComp = CreateDefaultSubobject<UEIAttributeComponent>(TEXT("Attribute Component"));
 	StateComp = CreateDefaultSubobject<UEIStateComponent>(TEXT("State Component"));
 	CombatComp = CreateDefaultSubobject<UEICombatComponent>(TEXT("Combat Component"));
+	TargetingComp = CreateDefaultSubobject<UEITargetingComponent>(TEXT("TargetingComponent"));
 }
 
 void AEICharacter::BeginPlay()
@@ -110,6 +112,11 @@ void AEICharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ThisClass::SpecialAttack);
 		// 강 공격
 		EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this, &ThisClass::HeavyAttack);
+
+		// LockedOn
+		EnhancedInputComponent->BindAction(LockOnTargetAction, ETriggerEvent::Started, this, &ThisClass::LockOnTarget);
+		EnhancedInputComponent->BindAction(LeftTargetAction, ETriggerEvent::Started, this, &ThisClass::LeftTarget);
+		EnhancedInputComponent->BindAction(RightTargetAction, ETriggerEvent::Started, this, &ThisClass::RightTarget);
 	}
 }
 
@@ -156,6 +163,12 @@ void AEICharacter::Move(const FInputActionValue& Value)
 
 void AEICharacter::Look(const FInputActionValue& Value)
 {
+	// LockedOn 상태에서는 입력 차단
+	if (TargetingComp && TargetingComp->IsLockOn())
+	{
+		return;
+	}
+
 	FVector2D LookInput = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
@@ -317,6 +330,21 @@ void AEICharacter::HeavyAttack()
 	{
 		ExecuteComboAttack(AttackTypeTag);
 	}
+}
+
+void AEICharacter::LockOnTarget()
+{
+	TargetingComp->ToggleLockOn();
+}
+
+void AEICharacter::LeftTarget()
+{
+	TargetingComp->SwitchingLockedOnActor(ESwitchingDirection::Left);
+}
+
+void AEICharacter::RightTarget()
+{
+	TargetingComp->SwitchingLockedOnActor(ESwitchingDirection::Right);
 }
 
 FGameplayTag AEICharacter::GetAttackPerform() const

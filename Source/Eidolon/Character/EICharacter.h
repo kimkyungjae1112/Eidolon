@@ -17,6 +17,7 @@ class UEIPlayerHUDWidget;
 class UEIStateComponent;
 class UEICombatComponent;
 class UAnimMontage;
+class UEITargetingComponent;
 
 UCLASS()
 class EIDOLON_API AEICharacter : public ACharacter
@@ -56,6 +57,18 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* HeavyAttackAction;
 
+	/* LockedOn */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> LockOnTargetAction;
+
+	/* 왼쪽으로 타겟 전환 */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> LeftTargetAction;
+
+	/* 오른쪽으로 타겟 전환 */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> RightTargetAction;
+
 private:
 	/* 캐릭터의 각종 스텟 관리 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -68,6 +81,10 @@ private:
 	/* 무기, 전투 관련 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UEICombatComponent> CombatComp;
+
+	/* LockedOn Targeting */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UEITargetingComponent> TargetingComp;
 
 // UI 섹션
 private:
@@ -151,6 +168,10 @@ protected:
 	void Attack();
 	void SpecialAttack();
 	void HeavyAttack();
+	/* LockedOn */
+	void LockOnTarget();
+	void LeftTarget();
+	void RightTarget();
 
 protected:
 	/** 현재 상태에서 수행 가능한 일반공격 */

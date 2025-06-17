@@ -5,16 +5,33 @@
 #include "Components/EIAttributeComponent.h"
 #include "Components/EIStateComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "GameplayTagContainer.h"
+#include "Components/SphereComponent.h"
+#include "Components/WidgetComponent.h"
 #include "Engine/DamageEvents.h"
 #include "Sound/SoundCue.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "EIGameplayTags.h"
 #include "EIDefine.h"
 
 AEIEnemy::AEIEnemy()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	// Targeting 구체 생성 및 Collision 설정
+	TargetingSphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("TargetingSphere"));
+	TargetingSphereComp->SetupAttachment(GetRootComponent());
+	TargetingSphereComp->SetCollisionObjectType(COLLISION_OBJECT_TARGETING);
+	TargetingSphereComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	TargetingSphereComp->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+	// LockOn 위젯
+	LockOnWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("LockOnWidgetComponent"));
+	LockOnWidgetComp->SetupAttachment(GetRootComponent());
+	LockOnWidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 50.f));
+	LockOnWidgetComp->SetDrawSize(FVector2D(30.f, 30.f));
+	LockOnWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+	LockOnWidgetComp->SetVisibility(false);
 
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
@@ -151,5 +168,22 @@ UAnimMontage* AEIEnemy::GetHitReactAnimation(const AActor* Attacker) const
 		break;
 	}
 	return SelectedMontage;
+}
+
+void AEIEnemy::OnTargeted(bool bTargeted)
+{
+	if (LockOnWidgetComp)
+	{
+		LockOnWidgetComp->SetVisibility(bTargeted);
+	}
+}
+
+bool AEIEnemy::CanBeTargeted()
+{
+	if (!StateComp) return false;
+
+	FGameplayTagContainer TagCheck;
+	TagCheck.AddTag(EIGameplayTags::Character_State_Death);
+	return StateComp->IsCurrentStateEqualToAny(TagCheck) == false;
 }
 

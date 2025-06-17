@@ -6,6 +6,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Character/EICharacter.h"
 #include "Components/EIStateComponent.h"
+#include "KismetAnimationLibrary.h"
 
 UEIAnimInstance::UEIAnimInstance()
 {
@@ -33,6 +34,8 @@ void UEIAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	bIsIdle = GroundSpeed < 3.f && MovementComp->GetCurrentAcceleration() == FVector::ZeroVector;
 	bIsFalling = MovementComp->IsFalling();
+
+	Direction = UKismetAnimationLibrary::CalculateDirection(Velocity, Character->GetActorRotation());
 }
 
 void UEIAnimInstance::AnimNotify_ResetMovementInput()

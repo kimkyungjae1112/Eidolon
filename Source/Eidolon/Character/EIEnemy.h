@@ -4,23 +4,36 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Interface/EITargetingInterface.h"
 #include "EIEnemy.generated.h"
 
 class UEIAttributeComponent;
 class UEIStateComponent;
 class USoundCue;
+class USphereComponent;
+class UWidgetComponent;
 
 UCLASS()
-class EIDOLON_API AEIEnemy : public ACharacter
+class EIDOLON_API AEIEnemy 
+	: public ACharacter
+	, public IEITargetingInterface
 {
 	GENERATED_BODY()
 
 protected:
+	/* 타겟팅 충돌 체크용 */
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USphereComponent> TargetingSphereComp;
+
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UEIAttributeComponent> AttributeComp;
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UEIStateComponent> StateComp;
+
+	/* LockOn UI Widget*/
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UWidgetComponent> LockOnWidgetComp;
 
 // Effect Section
 protected:
@@ -62,4 +75,10 @@ protected:
 	void HitReaction(const AActor* Attacker);
 	UAnimMontage* GetHitReactAnimation(const AActor* Attacker) const;
 
+public:
+	// EITargetingInterface Implement
+	/* 타겟팅시 처리할 로직 처리 */
+	virtual void OnTargeted(bool bTargeted) override;
+	/* 타겟팅 가능한지 체크 */
+	virtual bool CanBeTargeted() override;
 };
